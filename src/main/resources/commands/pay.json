@@ -1,0 +1,29 @@
+{
+  "name": "pay",
+  "description": "Pay from one account to another",
+  "options": [
+    {
+      "name": "payer",
+      "description": "Account to pay from",
+      "type": 4,
+      "required": true,
+      "max_value": 9999,
+      "min_value": 1000
+    },
+    {
+      "name": "payee",
+      "description": "Account to pay into",
+      "type": 4,
+      "required": true,
+      "max_value": 9999,
+      "min_value": 1000
+    },
+    {
+      "name": "amount",
+      "description": "Amount to send",
+      "type": 10,
+      "min_value": 0,
+      "required": true
+    }
+  ]
+}

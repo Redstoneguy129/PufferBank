@@ -1,0 +1,112 @@
+{
+  "name": "account",
+  "description": "Configure Account",
+  "options": [
+    {
+      "type": 1,
+      "name": "open",
+      "description": "Open a new account",
+      "options": [
+        {
+          "type": 3,
+          "name": "name",
+          "description": "Give your account a memorable name",
+          "max_length": 16
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "close",
+      "description": "Close an existing account",
+      "options": [
+        {
+          "type": 4,
+          "name": "account",
+          "description": "Account number",
+          "required": true,
+          "max_value": 9999,
+          "min_value": 1000
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "balance",
+      "description": "Gets the balance of your accounts",
+      "options": [
+        {
+          "type": 4,
+          "name": "account",
+          "description": "Get the balance of a single account",
+          "max_value": 9999,
+          "min_value": 1000
+        }
+      ]
+    },
+    {
+      "type": 2,
+      "name": "share",
+      "description": "Configure the sharing of your account",
+      "options": [
+        {
+          "type": 1,
+          "name": "add",
+          "description": "Add a user to your account",
+          "options": [
+            {
+              "type": 6,
+              "name": "user",
+              "description": "User to share account with",
+              "required": true
+            },
+            {
+              "type": 4,
+              "name": "account",
+              "description": "Account to share",
+              "required": true,
+              "max_value": 9999,
+              "min_value": 1000
+            }
+          ]
+        },
+        {
+          "type": 1,
+          "name": "remove",
+          "description": "Remove a user from your account",
+          "options": [
+            {
+              "type": 6,
+              "name": "user",
+              "description": "User to remove from your account",
+              "required": true
+            },
+            {
+              "type": 4,
+              "name": "account",
+              "description": "Account to remove user from",
+              "required": true,
+              "max_value": 9999,
+              "min_value": 1000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "transactions",
+      "description": "Find transaction history",
+      "options": [
+        {
+          "type": 4,
+          "name": "account",
+          "description": "Account to find transaction history",
+          "required": true,
+          "max_value": 9999,
+          "min_value": 1000
+        }
+      ]
+    }
+  ]
+}i

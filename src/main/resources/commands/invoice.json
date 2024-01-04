@@ -1,0 +1,22 @@
+{
+  "name": "invoice",
+  "description": "Generate an invoice for payment",
+  "default_member_permission": "8192",
+  "options": [
+    {
+      "type": 4,
+      "name": "account",
+      "description": "Account Payee",
+      "required": true,
+      "max_value": 9999,
+      "min_value": 1000
+    },
+    {
+      "type": 10,
+      "name": "amount",
+      "description": "Amount to charge",
+      "required": true,
+      "min_value": 0
+    }
+  ]
+}

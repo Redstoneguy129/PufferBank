@@ -1,0 +1,21 @@
+{
+  "name": "withdraw",
+  "description": "Withdraw money from account",
+  "options": [
+    {
+      "type": 4,
+      "name": "account",
+      "description": "Account to withdraw from",
+      "min_value": 1000,
+      "max_value": 9999,
+      "required": true
+    },
+    {
+      "type": 10,
+      "name": "amount",
+      "description": "Amount to withdraw",
+      "min_value": 0,
+      "required": true
+    }
+  ]
+}
