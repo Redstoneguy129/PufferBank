@@ -32,6 +32,28 @@
     },
     {
       "type": 1,
+      "name": "rename",
+      "description": "Rename an existing account",
+      "options": [
+        {
+          "type": 4,
+          "name": "account",
+          "description": "Account number",
+          "required": true,
+          "max_value": 9999,
+          "min_value": 1000
+        },
+        {
+          "type": 3,
+          "name": "name",
+          "description": "Give your account a memorable name",
+          "required": true,
+          "max_length": 16
+        }
+      ]
+    },
+    {
+      "type": 1,
       "name": "balance",
       "description": "Gets the balance of your accounts",
       "options": [
@@ -109,4 +131,4 @@
       ]
     }
   ]
-}i
+}

@@ -34,4 +34,8 @@ public class PufferfishApplication {
         return client.getRestClient();
     }
 
+    @Bean
+    public static ApplicationContextProvider contextProvider() {
+        return new ApplicationContextProvider();
+    }
 }

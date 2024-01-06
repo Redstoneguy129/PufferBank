@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.UUID;
 
 @Entity
-@Getter @Setter @NoArgsConstructor
+@Getter @NoArgsConstructor
 public class Invoice implements Serializable {
 
     private @Id @GeneratedValue(strategy = GenerationType.UUID) UUID id;
