@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.List;
+
 @Component
 public class AccountCommand implements SlashCommand {
 
@@ -42,9 +44,26 @@ public class AccountCommand implements SlashCommand {
                     .flatMap(user ->
                             this.getAccount(Integer.parseInt(event.getOption("rename").orElseThrow()
                                             .getOption("account").orElseThrow().getValue().orElseThrow().getRaw()))
-                            .flatMap(acc -> this.renameAccount(acc, event.getOption("rename").orElseThrow()
-                                    .getOption("name").orElseThrow().getValue().orElseThrow().asString(), user, event)))
+                                    .flatMap(acc -> this.renameAccount(acc, event.getOption("rename").orElseThrow()
+                                            .getOption("name").orElseThrow().getValue().orElseThrow().asString(), user, event)))
                     .flatMap(account -> event.reply().withContent("Account renamed to " + account.getName()));
+            case "close" -> Mono.just(event).then();
+            case "balance" -> Mono.just(event)
+                    .map(ChatInputInteractionEvent::getInteraction)
+                    .map(Interaction::getUser)
+                    .publishOn(Schedulers.boundedElastic())
+                    .flatMap(user -> event.getOption("account")
+                            .map(applicationCommandInteractionOption ->
+                                    Mono.just(List.of(Account
+                                            .getAccount(Integer.parseInt(applicationCommandInteractionOption
+                                                    .getValue().orElseThrow().getRaw())))))
+                            .orElseGet(() ->
+                                    Mono.just(Account.getAccounts(Customer.getUser(user.getId().asLong())))))
+                    .flatMap(acc -> {
+                        StringBuilder builder = new StringBuilder();
+                        acc.forEach(account -> builder.append(String.format("%s - %s: %s\n", account.getId(), account.getName(), account.getBalance())));
+                        return event.reply().withContent(builder.toString());
+                    });
             default ->
                     event.reply().withContent(String.format("This ATM %s command is not yet implemented.", getName()));
         };

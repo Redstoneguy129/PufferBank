@@ -1,9 +1,6 @@
 package me.cameronwhyte.pufferfish.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -18,10 +15,13 @@ public class Invoice implements Serializable {
     private @Id
     @GeneratedValue(strategy = GenerationType.UUID) UUID id;
 
-    private int payee;
+    @ManyToOne
+    @JoinColumn(name = "payee_id", referencedColumnName = "id")
+    private Account payee;
+
     private double amount;
 
-    public Invoice(int payee, double amount) {
+    public Invoice(Account payee, double amount) {
         this.payee = payee;
         this.amount = amount;
     }

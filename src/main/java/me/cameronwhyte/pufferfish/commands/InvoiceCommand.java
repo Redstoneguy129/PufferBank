@@ -8,6 +8,7 @@ import discord4j.core.object.component.Button;
 import discord4j.core.object.component.TextInput;
 import discord4j.core.spec.InteractionPresentModalSpec;
 import me.cameronwhyte.pufferfish.buttons.ApplicationButton;
+import me.cameronwhyte.pufferfish.entity.Account;
 import me.cameronwhyte.pufferfish.entity.Invoice;
 import me.cameronwhyte.pufferfish.modals.ApplicationModal;
 import me.cameronwhyte.pufferfish.repositories.InvoiceRepository;
@@ -61,7 +62,7 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
     public Mono<Void> handle(ChatInputInteractionEvent event) {
         int payee = Integer.parseInt(event.getOption("account").orElseThrow().getValue().orElseThrow().getRaw());
         double amount = event.getOption("amount").orElseThrow().getValue().orElseThrow().asDouble();
-        Invoice invoice = new Invoice(payee, amount);
+        Invoice invoice = new Invoice(Account.getAccount(payee), amount);
         this.repository.save(invoice);
         return event.reply().withComponents(ActionRow.of(Button.success(getCustomId(invoice), "Pay with Pufferfish!")));
     }

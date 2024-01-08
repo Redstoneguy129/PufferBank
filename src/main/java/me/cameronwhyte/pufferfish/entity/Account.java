@@ -11,6 +11,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -41,20 +42,11 @@ public class Account implements Serializable {
     @ManyToMany(mappedBy = "shared")
     private Set<Customer> shares = new HashSet<>();
 
+    @OneToMany(mappedBy = "payee", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<Invoice> invoices = new HashSet<>();
 
     public Account(Customer owner) {
         this.customer = owner;
-    }
-
-    public Account(Customer owner, double balance) {
-        this(owner);
-        this.balance = balance;
-    }
-
-    public Account(Customer owner, String name, double balance) {
-        this(owner);
-        this.name = name;
-        this.balance = balance;
     }
 
     public void deposit(double amount) {
@@ -69,5 +61,10 @@ public class Account implements Serializable {
     public static Account getAccount(int id) {
         AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
         return repository.findById(id).orElseThrow();
+    }
+
+    public static List<Account> getAccounts(Customer owner) {
+        AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
+        return ((List<Account>) repository.findAll()).stream().filter(account -> account.getCustomer().getId() == owner.getId()).toList();
     }
 }
