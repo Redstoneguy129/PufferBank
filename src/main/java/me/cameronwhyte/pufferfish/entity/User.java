@@ -1,10 +1,7 @@
 package me.cameronwhyte.pufferfish.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import me.cameronwhyte.pufferfish.PufferfishApplication;
 import me.cameronwhyte.pufferfish.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,15 +13,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
-@Entity
+@Entity @NoArgsConstructor
+@Data
 public class User implements Serializable {
 
-    private @Id long id;
-
-    //@OneToMany
-    //@JoinColumn(name = "user_id")
-    //private Set<Account> accounts;
+    private @Id long userId;
+//@OneToMany(mappedBy = "department", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<Account> accounts = new HashSet<>();
 
     //@ManyToMany(cascade = { CascadeType.ALL })
     //@JoinTable(
@@ -35,11 +31,7 @@ public class User implements Serializable {
     //private Set<Account> shared = new HashSet<>();
 
     public User(Long id) {
-        this.id = id;
-    }
-
-    public User() {
-
+        this.userId = id;
     }
 
     public static User getUser(Long id) {

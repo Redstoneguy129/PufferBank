@@ -1,10 +1,7 @@
 package me.cameronwhyte.pufferfish.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import me.cameronwhyte.pufferfish.PufferfishApplication;
 import me.cameronwhyte.pufferfish.repositories.AccountRepository;
 import org.hibernate.annotations.GenericGenerator;
@@ -14,8 +11,8 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-@Getter
-@Entity @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity @NoArgsConstructor
+@Data
 public class Account implements Serializable {
 
     @Id
@@ -34,9 +31,9 @@ public class Account implements Serializable {
 
     private double balance;
 
-    //@ManyToOne
-    //@JoinColumn(name = "user_id", insertable = false, updatable = false)
-    //private User user;
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "userId")
+    private User user;
 
     //@ManyToMany(mappedBy = "shared")
     //private Set<User> shares = new HashSet<>();
