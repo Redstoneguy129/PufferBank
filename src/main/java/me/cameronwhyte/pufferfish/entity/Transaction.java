@@ -37,6 +37,10 @@ public class Transaction implements Serializable {
     private Account payee;
 
     private double amount;
+
+    @Nullable
+    private String description;
+
     private Timestamp timestamp;
 
     public Transaction(@Nullable Account payer, Account payee, double amount) throws IllegalArgumentException {
@@ -52,9 +56,21 @@ public class Transaction implements Serializable {
         }
     }
 
+    public Transaction(@Nullable Account payer, Account payee, double amount, @Nullable String description) throws IllegalArgumentException {
+        this(payer, payee, amount);
+        this.description = description;
+    }
+
     public static Mono<Transaction> transfer(Account payer, Account payee, double amount) throws IllegalArgumentException {
         TransactionRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
         return Mono.just(new Transaction(payer, payee, amount))
+                .publishOn(Schedulers.boundedElastic())
+                .doOnNext(repository::save);
+    }
+
+    public static Mono<Transaction> transfer(Account payer, Account payee, double amount, @Nullable String description) throws IllegalArgumentException {
+        TransactionRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
+        return Mono.just(new Transaction(payer, payee, amount, description))
                 .publishOn(Schedulers.boundedElastic())
                 .doOnNext(repository::save);
     }
