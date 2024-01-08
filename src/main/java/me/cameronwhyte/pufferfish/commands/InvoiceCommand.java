@@ -20,7 +20,8 @@ import java.util.List;
 @Component
 public class InvoiceCommand implements SlashCommand, ApplicationModal, ApplicationButton {
 
-    @Autowired private InvoiceRepository repository;
+    @Autowired
+    private InvoiceRepository repository;
 
     @Override
     public String getName() {
@@ -28,7 +29,7 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
     }
 
     private String getCustomId(Invoice invoice) {
-        return getName()+"-"+invoice.getId();
+        return getName() + "-" + invoice.getId();
     }
 
     private InteractionPresentModalSpec getModalSpec() {
@@ -37,9 +38,9 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
                 .customId(getName())
                 .addAllComponents(List.of(
                         ActionRow.of(
-                        TextInput.small("account", "Account Number", 4, 4).placeholder("0000").required()),
+                                TextInput.small("account", "Account Number", 4, 4).placeholder("0000").required()),
                         ActionRow.of(
-                        TextInput.small("name", "Description").placeholder("Payment for...").required(false))
+                                TextInput.small("name", "Description").placeholder("Payment for...").required(false))
                 ))
                 .build();
     }

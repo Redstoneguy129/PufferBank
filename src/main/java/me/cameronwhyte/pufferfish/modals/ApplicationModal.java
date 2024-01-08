@@ -5,5 +5,6 @@ import reactor.core.publisher.Mono;
 
 public interface ApplicationModal {
     String getName();
+
     Mono<Void> handle(ModalSubmitInteractionEvent event);
 }
