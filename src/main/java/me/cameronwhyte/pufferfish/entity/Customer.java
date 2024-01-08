@@ -5,9 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.cameronwhyte.pufferfish.PufferfishApplication;
 import me.cameronwhyte.pufferfish.repositories.CustomerRepository;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -15,8 +18,15 @@ import java.util.Set;
 @Data
 public class Customer implements Serializable {
 
+    private static CustomerRepository getRepository() {
+        return PufferfishApplication.contextProvider().getApplicationContext().getBean("customerRepository", CustomerRepository.class);
+    }
+
     @Id
     private long id;
+
+    @Nullable
+    private String IGN;
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Account> accounts = new HashSet<>();
@@ -40,5 +50,24 @@ public class Customer implements Serializable {
             repository.save(user);
             return user;
         });
+    }
+
+    public void setIGN(@NonNull String ign) {
+        CustomerRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("customerRepository", CustomerRepository.class);
+        this.IGN = ign;
+        repository.save(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Customer other) {
+            return this.getId() == other.getId();
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
