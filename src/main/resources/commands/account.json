@@ -53,20 +53,6 @@
       ]
     },
     {
-      "type": 1,
-      "name": "balance",
-      "description": "Gets the balance of your accounts",
-      "options": [
-        {
-          "type": 4,
-          "name": "account",
-          "description": "Get the balance of a single account",
-          "max_value": 9999,
-          "min_value": 1000
-        }
-      ]
-    },
-    {
       "type": 2,
       "name": "share",
       "description": "Configure the sharing of your account",

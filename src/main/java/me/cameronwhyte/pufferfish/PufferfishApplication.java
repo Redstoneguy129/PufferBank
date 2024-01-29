@@ -13,12 +13,17 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class PufferfishApplication {
 
+    @Value("${bot.token}")
+    private String token;
+
     public static void main(String[] args) {
         SpringApplication.run(PufferfishApplication.class, args);
     }
 
-    @Value("${bot.token}")
-    private String token;
+    @Bean
+    public static ApplicationContextProvider contextProvider() {
+        return new ApplicationContextProvider();
+    }
 
     @Bean
     public GatewayDiscordClient gatewayDiscordClient() {
@@ -32,10 +37,5 @@ public class PufferfishApplication {
     @Bean
     public RestClient discordRestClient(GatewayDiscordClient client) {
         return client.getRestClient();
-    }
-
-    @Bean
-    public static ApplicationContextProvider contextProvider() {
-        return new ApplicationContextProvider();
     }
 }

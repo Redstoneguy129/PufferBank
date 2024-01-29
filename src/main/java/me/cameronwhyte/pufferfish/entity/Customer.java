@@ -18,29 +18,21 @@ import java.util.Set;
 @Data
 public class Customer implements Serializable {
 
-    private static CustomerRepository getRepository() {
-        return PufferfishApplication.contextProvider().getApplicationContext().getBean("customerRepository", CustomerRepository.class);
-    }
-
     @Id
     private long id;
-
     @Nullable
     private String IGN;
-
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Account> accounts = new HashSet<>();
-
-    @ManyToMany(cascade = {CascadeType.ALL})
-    @JoinTable(
-            name = "shared_account",
-            joinColumns = {@JoinColumn(name = "customer_id")},
-            inverseJoinColumns = {@JoinColumn(name = "account_id")}
-    )
+    @ManyToMany(mappedBy = "shares", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Account> shared = new HashSet<>();
 
     public Customer(Long id) {
         this.id = id;
+    }
+
+    private static CustomerRepository getRepository() {
+        return PufferfishApplication.contextProvider().getApplicationContext().getBean("customerRepository", CustomerRepository.class);
     }
 
     public static Customer getUser(Long id) {
@@ -62,6 +54,8 @@ public class Customer implements Serializable {
     public boolean equals(Object obj) {
         if (obj instanceof Customer other) {
             return this.getId() == other.getId();
+        } else if (obj instanceof Long l) {
+            return this.getId() == l;
         }
         return false;
     }

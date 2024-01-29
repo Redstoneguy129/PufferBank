@@ -1,0 +1,13 @@
+{
+  "name": "balance",
+  "description": "Gets the balance of your account(s)",
+  "options": [
+    {
+      "type": 4,
+      "name": "account",
+      "description": "Get the balance of a single account",
+      "max_value": 9999,
+      "min_value": 1000
+    }
+  ]
+}

@@ -19,28 +19,19 @@ import java.util.UUID;
 @Data
 public class Transaction implements Serializable {
 
-    private static TransactionRepository getRepository() {
-        return PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
     @ManyToOne
     @JoinColumn(name = "payer_id", referencedColumnName = "id")
     @Nullable
     private Account payer;
-
     @ManyToOne
     @JoinColumn(name = "payee_id", referencedColumnName = "id")
     private Account payee;
-
     private double amount;
-
     @Nullable
     private String description;
-
     private Timestamp timestamp;
 
     public Transaction(@Nullable Account payer, Account payee, double amount) throws IllegalArgumentException {
@@ -59,6 +50,10 @@ public class Transaction implements Serializable {
     public Transaction(@Nullable Account payer, Account payee, double amount, @Nullable String description) throws IllegalArgumentException {
         this(payer, payee, amount);
         this.description = description;
+    }
+
+    private static TransactionRepository getRepository() {
+        return PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
     }
 
     public static Mono<Transaction> transfer(Account payer, Account payee, double amount) throws IllegalArgumentException {

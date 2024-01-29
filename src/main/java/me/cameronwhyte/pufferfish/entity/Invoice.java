@@ -3,6 +3,8 @@ package me.cameronwhyte.pufferfish.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.cameronwhyte.pufferfish.PufferfishApplication;
+import me.cameronwhyte.pufferfish.repositories.InvoiceRepository;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -26,6 +28,11 @@ public class Invoice implements Serializable {
     public Invoice(Account payee, double amount) {
         this.payee = payee;
         this.amount = amount;
+    }
+
+    public static Invoice of(String id) {
+        InvoiceRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("invoiceRepository", InvoiceRepository.class);
+        return repository.findById(UUID.fromString(id)).orElseThrow();
     }
 
     @Override

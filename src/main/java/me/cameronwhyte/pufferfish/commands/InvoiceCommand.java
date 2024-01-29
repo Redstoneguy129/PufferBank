@@ -3,6 +3,8 @@ package me.cameronwhyte.pufferfish.commands;
 import discord4j.core.event.domain.interaction.ButtonInteractionEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.interaction.ModalSubmitInteractionEvent;
+import discord4j.core.object.command.ApplicationCommandInteractionOption;
+import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
 import discord4j.core.object.component.ActionRow;
 import discord4j.core.object.component.Button;
 import discord4j.core.object.component.TextInput;
@@ -17,10 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuples;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class InvoiceCommand implements SlashCommand, ApplicationModal, ApplicationButton {
@@ -50,16 +51,19 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
                 ));
     }
 
+    private Mono<Invoice> findById(String customId) {
+        return Mono.just(customId)
+                .map(c -> c.replace(getName() + "-", ""))
+                .mapNotNull(Invoice::of);
+    }
+
     @Override
     public Mono<Void> handle(ModalSubmitInteractionEvent event) {
         int accountId = Integer.parseInt(event.getComponents(TextInput.class).get(0).getValue().orElseThrow());
         String description = event.getComponents(TextInput.class).get(1).getValue().orElseThrow();
         return Mono.just(event)
                 .map(ModalSubmitInteractionEvent::getCustomId)
-                .map(customId -> customId.replace(getName() + "-", ""))
-                .map(UUID::fromString)
-                .map(repository::findById)
-                .map(Optional::orElseThrow)
+                .flatMap(this::findById)
                 .publishOn(Schedulers.boundedElastic())
                 .doOnNext(ignored -> event.getMessage().orElseThrow().delete().block())
                 .flatMap(invoice -> {
@@ -76,10 +80,21 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
 
     @Override
     public Mono<Void> handle(ChatInputInteractionEvent event) {
-        int payee = Integer.parseInt(event.getOption("account").orElseThrow().getValue().orElseThrow().getRaw());
-        double amount = event.getOption("amount").orElseThrow().getValue().orElseThrow().asDouble();
-        Invoice invoice = new Invoice(Account.getAccount(payee), amount);
-        this.repository.save(invoice);
-        return event.reply().withComponents(ActionRow.of(Button.success(getCustomId(invoice), "Pay with Pufferfish!")));
+        return Mono.just(event)
+                .map(e -> e.getOption("account")
+                        .flatMap(ApplicationCommandInteractionOption::getValue)
+                        .map(ApplicationCommandInteractionOptionValue::getRaw)
+                        .map(Integer::parseInt)
+                        .map(accountOption -> Tuples.of(event, accountOption)).orElseThrow()
+                )
+                .map(tuple -> tuple.getT1().getOption("amount")
+                        .flatMap(ApplicationCommandInteractionOption::getValue)
+                        .map(ApplicationCommandInteractionOptionValue::asDouble)
+                        .map(amountOption -> Tuples.of(tuple.getT2(), amountOption)).orElseThrow()
+                )
+                .mapNotNull(tuple -> new Invoice(Account.getAccount(tuple.getT1()), tuple.getT2()))
+                .doOnNext(repository::save)
+                .flatMap(invoice -> event.reply().withContent("Invoice created!")
+                        .withComponents(ActionRow.of(Button.success(getCustomId(invoice), "Pay with Pufferfish!"))));
     }
 }
