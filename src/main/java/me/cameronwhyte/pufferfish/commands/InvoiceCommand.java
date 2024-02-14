@@ -8,18 +8,19 @@ import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
 import discord4j.core.object.component.ActionRow;
 import discord4j.core.object.component.Button;
 import discord4j.core.object.component.TextInput;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.rest.util.Color;
 import me.cameronwhyte.pufferfish.buttons.ApplicationButton;
 import me.cameronwhyte.pufferfish.entity.Account;
 import me.cameronwhyte.pufferfish.entity.Customer;
 import me.cameronwhyte.pufferfish.entity.Invoice;
 import me.cameronwhyte.pufferfish.entity.Transaction;
+import me.cameronwhyte.pufferfish.exceptions.AccountException;
 import me.cameronwhyte.pufferfish.modals.ApplicationModal;
 import me.cameronwhyte.pufferfish.repositories.InvoiceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuples;
 
 import java.util.List;
 
@@ -32,6 +33,11 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
     @Override
     public String getName() {
         return "invoice";
+    }
+
+    @Override
+    public boolean ephemeral() {
+        return false;
     }
 
     private String getCustomId(Invoice invoice) {
@@ -61,40 +67,50 @@ public class InvoiceCommand implements SlashCommand, ApplicationModal, Applicati
     public Mono<Void> handle(ModalSubmitInteractionEvent event) {
         int accountId = Integer.parseInt(event.getComponents(TextInput.class).get(0).getValue().orElseThrow());
         String description = event.getComponents(TextInput.class).get(1).getValue().orElseThrow();
-        return Mono.just(event)
-                .map(ModalSubmitInteractionEvent::getCustomId)
-                .flatMap(this::findById)
-                .publishOn(Schedulers.boundedElastic())
-                .doOnNext(ignored -> event.getMessage().orElseThrow().delete().block())
-                .flatMap(invoice -> {
-                    Account payee = invoice.getPayee();
-                    Account payer = Account.getAccount(accountId);
-                    if (payer.getCustomer().getId() != Customer.getUser(event.getInteraction().getUser().getId().asLong()).getId())
-                        return Mono.error(new IllegalArgumentException("You can't pay from someone else's account!"));
-                    double amount = invoice.getAmount();
-                    return Transaction.transfer(payer, payee, amount, description);
-                })
-                .doOnError(err -> event.reply().withContent(err.getMessage()).block())
-                .mapNotNull(transaction -> event.reply().withContent("Successfully sent $" + transaction.getAmount() + " to " + transaction.getPayee().getId() + " from " + transaction.getPayer().getId()).block()).then();
+        Account account = Account.getAccount(accountId);
+
+        return findById(event.getCustomId())
+                .filter(invoice -> account.getCustomer().equals(Customer.getUser(event.getInteraction().getUser().getId().asLong())))
+                .switchIfEmpty(Mono.error(new AccountException("You can't pay from someone else's account")))
+                .flatMap(invoice -> Transaction.transfer(account, invoice.getPayee(), invoice.getAmount(), description))
+                .flatMap(transaction -> event.createFollowup()
+                        .withEmbeds(EmbedCreateSpec.builder()
+                                .title("Payment Successful")
+                                .color(Color.ORANGE)
+                                .description("You have successfully paid the invoice.")
+                                .addField("Recipient", String.format("<@%s> (%s)", transaction.getPayee().getCustomer().getId(), transaction.getPayee().getId()), false)
+                                .addField("Amount", "$" + transaction.getAmount(), false)
+                                .timestamp(event.getInteraction().getId().getTimestamp())
+                                .build()))
+                .then();
     }
 
     @Override
     public Mono<Void> handle(ChatInputInteractionEvent event) {
-        return Mono.just(event)
-                .map(e -> e.getOption("account")
-                        .flatMap(ApplicationCommandInteractionOption::getValue)
-                        .map(ApplicationCommandInteractionOptionValue::getRaw)
-                        .map(Integer::parseInt)
-                        .map(accountOption -> Tuples.of(event, accountOption)).orElseThrow()
-                )
-                .map(tuple -> tuple.getT1().getOption("amount")
-                        .flatMap(ApplicationCommandInteractionOption::getValue)
-                        .map(ApplicationCommandInteractionOptionValue::asDouble)
-                        .map(amountOption -> Tuples.of(tuple.getT2(), amountOption)).orElseThrow()
-                )
-                .mapNotNull(tuple -> new Invoice(Account.getAccount(tuple.getT1()), tuple.getT2()))
+        Account account = event.getOption("account")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::getRaw)
+                .map(Integer::parseInt)
+                .map(Account::getAccount)
+                .orElseThrow();
+
+        double amount = event.getOption("amount")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::asDouble)
+                .orElseThrow();
+
+        return Mono.just(new Invoice(account, amount))
                 .doOnNext(repository::save)
-                .flatMap(invoice -> event.reply().withContent("Invoice created!")
-                        .withComponents(ActionRow.of(Button.success(getCustomId(invoice), "Pay with Pufferfish!"))));
+                .flatMap(invoice -> event.createFollowup()
+                        .withEmbeds(EmbedCreateSpec.builder()
+                                .title("Invoice")
+                                .color(Color.ORANGE)
+                                .description("You can pay this invoice with the button below.")
+                                .addField("Recipient", String.valueOf(invoice.getPayee().getId()), true)
+                                .addField("Amount", "$" + invoice.getAmount(), true)
+                                .timestamp(event.getInteraction().getId().getTimestamp())
+                                .build())
+                        .withComponents(ActionRow.of(Button.success(getCustomId(invoice), "Pay with Pufferfish!")))
+                        .withEphemeral(ephemeral())).then();
     }
 }
