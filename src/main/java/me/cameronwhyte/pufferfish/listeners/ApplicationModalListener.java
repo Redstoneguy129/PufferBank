@@ -28,8 +28,7 @@ public class ApplicationModalListener {
         return Flux.fromIterable(this.modals)
                 .filter(modal -> event.getCustomId().contains(modal.getName()))
                 .next()
-                .doOnNext(modal -> event.deferReply())
-                .flatMap(modal -> modal.handle(event))
+                .flatMap(modal -> event.deferReply().then(modal.handle(event)))
                 .doOnError(throwable -> handleError(throwable, event));
     }
 

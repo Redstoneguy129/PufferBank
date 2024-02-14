@@ -33,11 +33,12 @@ public class SlashCommandListener {
         return Flux.fromIterable(this.commands)
                 .filter(command -> command.getName().equals(event.getCommandName()))
                 .next()
-                .doOnNext(command -> {
+                .flatMap(command -> {
                     if (event.getOption("open").isEmpty())
-                        delayReply(event, command);
+                        return event.deferReply().then(command.handle(event));
+                    else
+                        return command.handle(event);
                 })
-                .flatMap(command -> command.handle(event))
                 .doOnError(throwable -> handleError(throwable, event));
     }
 

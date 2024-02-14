@@ -24,10 +24,12 @@ public class Invoice implements Serializable {
     private Account payee;
 
     private double amount;
+    private boolean paid;
 
     public Invoice(Account payee, double amount) {
         this.payee = payee;
         this.amount = amount;
+        this.paid = false;
     }
 
     public static Invoice of(String id) {

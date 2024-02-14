@@ -1,7 +1,7 @@
 {
   "name": "invoice",
   "description": "Generate an invoice for payment",
-  "default_member_permission": "8192",
+  "default_member_permission": "8",
   "options": [
     {
       "type": 4,
