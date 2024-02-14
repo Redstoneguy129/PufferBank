@@ -6,5 +6,7 @@ import reactor.core.publisher.Mono;
 public interface SlashCommand {
     String getName();
 
+    boolean ephemeral();
+
     Mono<Void> handle(ChatInputInteractionEvent event);
 }
