@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.cameronwhyte.pufferfish.PufferfishApplication;
+import me.cameronwhyte.pufferfish.exceptions.PaymentException;
 import me.cameronwhyte.pufferfish.repositories.TransactionRepository;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -12,6 +13,7 @@ import reactor.util.annotation.Nullable;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -34,16 +36,17 @@ public class Transaction implements Serializable {
     private String description;
     private Timestamp timestamp;
 
-    public Transaction(@Nullable Account payer, Account payee, double amount) throws IllegalArgumentException {
+    public Transaction(@Nullable Account payer, Account payee, double amount) throws PaymentException {
         this.payer = payer;
         this.payee = payee;
         this.amount = amount;
         this.timestamp = new Timestamp(System.currentTimeMillis());
         try {
-            this.payer.withdraw(amount);
+            if (this.payer != null)
+                this.payer.withdraw(amount);
             this.payee.deposit(amount);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Insufficient funds");
+        } catch (PaymentException e) {
+            throw new PaymentException("Insufficient funds");
         }
     }
 
@@ -56,14 +59,19 @@ public class Transaction implements Serializable {
         return PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
     }
 
-    public static Mono<Transaction> transfer(Account payer, Account payee, double amount) throws IllegalArgumentException {
+    public static Optional<Transaction> of(UUID uuid) {
+        TransactionRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
+        return repository.findById(uuid);
+    }
+
+    public static Mono<Transaction> transfer(@Nullable Account payer, Account payee, double amount) {
         TransactionRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
         return Mono.just(new Transaction(payer, payee, amount))
                 .publishOn(Schedulers.boundedElastic())
                 .doOnNext(repository::save);
     }
 
-    public static Mono<Transaction> transfer(Account payer, Account payee, double amount, @Nullable String description) throws IllegalArgumentException {
+    public static Mono<Transaction> transfer(@Nullable Account payer, Account payee, double amount, @Nullable String description) {
         TransactionRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("transactionRepository", TransactionRepository.class);
         return Mono.just(new Transaction(payer, payee, amount, description))
                 .publishOn(Schedulers.boundedElastic())
@@ -83,5 +91,11 @@ public class Transaction implements Serializable {
         return Objects.hash(id);
     }
 
-
+    @Override
+    public String toString() {
+        if (this.payer == null) {
+            return String.format("[<t:%s:d>] BANK => %s: %s (%s)", timestamp.getTime() / 1000, payee.getId(), String.format("$%.2f", amount), description);
+        }
+        return String.format("[<t:%s:d>] %s => %s: %s (%s)", timestamp.getTime() / 1000, payer.getId(), payee.getId(), String.format("$%.2f", amount), description);
+    }
 }

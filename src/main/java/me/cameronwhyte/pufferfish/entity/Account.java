@@ -5,16 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import me.cameronwhyte.pufferfish.PufferfishApplication;
+import me.cameronwhyte.pufferfish.exceptions.AccountException;
+import me.cameronwhyte.pufferfish.exceptions.PaymentException;
 import me.cameronwhyte.pufferfish.repositories.AccountRepository;
 import me.cameronwhyte.pufferfish.repositories.EntityRepository;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
+import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @NoArgsConstructor
@@ -62,14 +63,38 @@ public class Account implements Serializable, EntityRepository<AccountRepository
         this.customer = owner;
     }
 
+    public Account(Customer owner, String name) {
+        this.customer = owner;
+        this.name = name;
+    }
+
+    public static Mono<Account> register(Customer owner, @Nullable String name) {
+        if (owner.getIGN() == null) {
+            throw new IllegalArgumentException("Customer must have an IGN");
+        }
+        Account account;
+        if (name != null) {
+            account = new Account(owner, name);
+        } else {
+            account = new Account(owner);
+        }
+        account.save();
+        return Mono.just(account);
+    }
+
     public static Account getAccount(int id) {
         AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
-        return repository.findById(id).orElseThrow();
+        return repository.findById(id).orElseThrow(() -> new AccountException("Account not found"));
     }
 
     public static List<Account> getAccounts(Customer owner) {
         AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
         return ((List<Account>) repository.findAll()).stream().filter(account -> account.getCustomer().getId() == owner.getId()).toList();
+    }
+
+    public static List<Account> getAllAccounts() {
+        AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
+        return ((List<Account>) repository.findAll()).stream().toList();
     }
 
     public void deposit(double amount) {
@@ -78,18 +103,17 @@ public class Account implements Serializable, EntityRepository<AccountRepository
     }
 
     public void withdraw(double amount) {
-        if (this.balance < amount) throw new IllegalArgumentException("Insufficient funds");
+        if (this.balance < amount) throw new PaymentException("Insufficient funds");
         this.balance -= amount;
         this.save();
     }
 
     public void closeAccount() {
-        if (this.balance > 0) throw new IllegalArgumentException("Account must be empty to close");
+        if (this.balance > 1) throw new AccountException("Account must be empty to close");
         this.delete();
     }
 
     public void addShare(Customer customer) {
-        System.out.println("Adding share");
         this.shares.add(customer);
         this.save();
     }
@@ -99,11 +123,26 @@ public class Account implements Serializable, EntityRepository<AccountRepository
         this.save();
     }
 
-    public Set<Transaction> getTransactions() {
-        Set<Transaction> transactions = new HashSet<>(Set.of());
+    //public void addInterest(double percent) {
+    //    this.balance += this.balance * (percent / 100);
+    //    this.save();
+    //}
+
+    public List<Transaction> getTransactions() {
+        List<Transaction> transactions = new ArrayList<>();
         transactions.addAll(this.receiving_transactions);
         transactions.addAll(this.sending_transactions);
+
+        transactions.sort(Comparator.comparing(Transaction::getTimestamp).reversed());
+
         return transactions;
+    }
+
+    public String getName() {
+        if (this.name == null) {
+            return "";
+        }
+        return this.name;
     }
 
     @Override
@@ -120,17 +159,24 @@ public class Account implements Serializable, EntityRepository<AccountRepository
     }
 
     @Override
+    public String toString() {
+        return String.format("Account{id=%d, name='%s', balance=%f, customer=%s}", id, name, balance, customer.getIGN());
+    }
+
+    @Override
     public AccountRepository getRepository() {
         return PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
     }
 
     @Override
     public void save() {
-        this.getRepository().save(this);
+        AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
+        repository.save(this);
     }
 
     @Override
     public void delete() {
-        this.getRepository().delete(this);
+        AccountRepository repository = PufferfishApplication.contextProvider().getApplicationContext().getBean("accountRepository", AccountRepository.class);
+        repository.delete(this);
     }
 }
