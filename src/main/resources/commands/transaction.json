@@ -1,0 +1,14 @@
+{
+  "name": "transaction",
+  "description": "Get information on specific transactions",
+  "options": [
+    {
+      "name": "transaction",
+      "description": "UUID of the transaction",
+      "max_length": 36,
+      "min_length": 36,
+      "type": 3,
+      "required": true
+    }
+  ]
+}
