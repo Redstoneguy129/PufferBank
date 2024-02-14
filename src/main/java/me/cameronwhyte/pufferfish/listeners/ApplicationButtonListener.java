@@ -24,6 +24,7 @@ public class ApplicationButtonListener {
         return Flux.fromIterable(this.buttons)
                 .filter(button -> event.getCustomId().contains(button.getName()))
                 .next()
+                .doOnNext(button -> event.deferReply())
                 .flatMap(button -> button.handle(event));
     }
 }

@@ -13,7 +13,14 @@ public class PingCommand implements SlashCommand {
     }
 
     @Override
+    public boolean ephemeral() {
+        return true;
+    }
+
+    @Override
     public Mono<Void> handle(ChatInputInteractionEvent event) {
-        return event.reply().withEphemeral(false).withContent("Pong!");
+        return event.createFollowup("Pong!")
+                .withEphemeral(false)
+                .then();
     }
 }

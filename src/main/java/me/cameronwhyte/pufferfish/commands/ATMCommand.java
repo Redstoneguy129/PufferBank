@@ -1,50 +1,62 @@
 package me.cameronwhyte.pufferfish.commands;
 
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.object.command.ApplicationCommandInteractionOption;
+import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
+import discord4j.core.spec.EmbedCreateSpec;
 import me.cameronwhyte.pufferfish.entity.Account;
-import me.cameronwhyte.pufferfish.repositories.AccountRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 public abstract class ATMCommand implements SlashCommand {
 
-    @Autowired
-    private AccountRepository repository;
+    @Override
+    public boolean ephemeral() {
+        return false;
+    }
 
     @Override
     public Mono<Void> handle(ChatInputInteractionEvent event) {
+        Account account = event.getOption("account")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::getRaw)
+                .map(Integer::parseInt)
+                .map(Account::getAccount)
+                .orElseThrow();
+
+        double amount = event.getOption("amount")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::asDouble)
+                .orElseThrow();
+
         return switch (event.getCommandName()) {
-            case "withdraw" -> this.withdraw(event);
-            case "deposit" -> this.deposit(event);
+            case "withdraw" -> withdraw(event, account, amount);
+            case "deposit" -> deposit(event, account, amount);
             default ->
-                    event.reply().withContent(String.format("This ATM %s command is not yet implemented.", getName()));
+                    event.createFollowup(String.format("This ATM %s command is not yet implemented.", getName())).then();
         };
     }
 
-    private Mono<Void> withdraw(ChatInputInteractionEvent event) {
-        return Mono.just(event)
-                .publishOn(Schedulers.boundedElastic())
-                .map(e -> {
-                    Account account = Account.getAccount(Integer.parseInt(e.getOption("account").orElseThrow().getValue().orElseThrow().getRaw()));
-                    double amount = e.getOption("amount").orElseThrow().getValue().orElseThrow().asDouble();
-                    account.withdraw(amount);
-                    this.repository.save(account);
-                    return account;
-                })
-                .flatMap(account -> event.reply().withContent("Account Withdrawn " + account.getId() + " balance now at " + account.getBalance()));
+    private Mono<Void> withdraw(ChatInputInteractionEvent event, Account account, double amount) {
+        account.withdraw(amount);
+        return event.createFollowup()
+                .withEmbeds(EmbedCreateSpec.builder()
+                        .title("Withdraw Successful")
+                        .description(String.format("You have withdrawn $%.2f from %s", amount, account.getId()))
+                        .timestamp(event.getInteraction().getId().getTimestamp())
+                        .build())
+                .withEphemeral(ephemeral())
+                .then();
     }
 
-    private Mono<Void> deposit(ChatInputInteractionEvent event) {
-        return Mono.just(event)
-                .publishOn(Schedulers.boundedElastic())
-                .map(e -> {
-                    Account account = Account.getAccount(Integer.parseInt(e.getOption("account").orElseThrow().getValue().orElseThrow().getRaw()));
-                    double amount = e.getOption("amount").orElseThrow().getValue().orElseThrow().asDouble();
-                    account.deposit(amount);
-                    this.repository.save(account);
-                    return account;
-                })
-                .flatMap(account -> event.reply().withContent("Account Deposited " + account.getId() + " balance now at " + account.getBalance()));
+    private Mono<Void> deposit(ChatInputInteractionEvent event, Account account, double amount) {
+        account.deposit(amount);
+        return event.createFollowup()
+                .withEmbeds(EmbedCreateSpec.builder()
+                        .title("Deposit Successful")
+                        .description(String.format("You have deposited $%.2f into %s", amount, account.getId()))
+                        .timestamp(event.getInteraction().getId().getTimestamp())
+                        .build())
+                .withEphemeral(ephemeral())
+                .then();
     }
 }

@@ -1,12 +1,16 @@
 package me.cameronwhyte.pufferfish.commands;
 
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.object.command.ApplicationCommandInteractionOption;
+import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.rest.util.Color;
 import me.cameronwhyte.pufferfish.entity.Account;
 import me.cameronwhyte.pufferfish.entity.Customer;
 import me.cameronwhyte.pufferfish.entity.Transaction;
+import me.cameronwhyte.pufferfish.exceptions.AccountException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Component
 public class PayCommand implements SlashCommand {
@@ -16,20 +20,44 @@ public class PayCommand implements SlashCommand {
     }
 
     @Override
+    public boolean ephemeral() {
+        return false;
+    }
+
+    @Override
     public Mono<Void> handle(ChatInputInteractionEvent event) {
-        return Mono.just(event)
-                .publishOn(Schedulers.boundedElastic())
-                .doOnNext(e -> e.reply().withContent("Processing Payment...").withEphemeral(true).block())
-                .flatMap(e -> {
-                    Account payer = Account.getAccount(Integer.parseInt(e.getOption("payer").orElseThrow().getValue().orElseThrow().getRaw()));
-                    if (payer.getCustomer().getId() != Customer.getUser(e.getInteraction().getUser().getId().asLong()).getId())
-                        return Mono.error(new IllegalArgumentException("You can't pay from someone else's account!"));
-                    Account payee = Account.getAccount(Integer.parseInt(e.getOption("payee").orElseThrow().getValue().orElseThrow().getRaw()));
-                    double amount = e.getOption("amount").orElseThrow().getValue().orElseThrow().asDouble();
-                    return Transaction.transfer(payer, payee, amount);
-                })
-                .publishOn(Schedulers.boundedElastic())
-                .doOnError(err -> event.editReply().withContentOrNull(err.getMessage()).block())
-                .mapNotNull(transaction -> event.editReply().withContentOrNull("Successfully sent $" + transaction.getAmount() + " to " + transaction.getPayee().getId() + " from " + transaction.getPayer().getId()).block()).then();
+        Account payer = event.getOption("payer")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::getRaw)
+                .map(Integer::parseInt)
+                .map(Account::getAccount)
+                .filter(acc -> acc.getCustomer().equals(Customer.getUser(event.getInteraction().getUser().getId().asLong())))
+                .orElseThrow(() -> new AccountException("You do not own this account."));
+
+        Account payee = event.getOption("payee")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::getRaw)
+                .map(Integer::parseInt)
+                .map(Account::getAccount)
+                .orElseThrow();
+
+        double amount = event.getOption("amount")
+                .flatMap(ApplicationCommandInteractionOption::getValue)
+                .map(ApplicationCommandInteractionOptionValue::asDouble)
+                .orElseThrow();
+
+        return Transaction.transfer(payer, payee, amount)
+                .flatMap(transaction -> event.createFollowup()
+                        .withEmbeds(EmbedCreateSpec.builder()
+                                .title("Payment Successful")
+                                .color(Color.ORANGE)
+                                .description(String.valueOf(transaction.getId()))
+                                .addField("Recipient", String.format("<@%s> (%s)", transaction.getPayee().getCustomer().getId(), transaction.getPayee().getId()), false)
+                                .addField("Sender", String.format("<@%s> (%s)", transaction.getPayer() != null ? transaction.getPayer().getCustomer().getId() : 0, transaction.getPayer() != null ? transaction.getPayer().getId() : 0), false)
+                                .addField("Amount", "$" + transaction.getAmount(), false)
+                                .timestamp(event.getInteraction().getId().getTimestamp())
+                                .build())
+                        .withEphemeral(ephemeral()))
+                .then();
     }
 }
