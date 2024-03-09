@@ -29,6 +29,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.projectlombok:lombok")
+
+    //runtimeOnly("org.mariadb:r2dbc-mariadb:1.2.0")
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.3.3")
 }
