@@ -9,8 +9,6 @@ import me.cameronwhyte.pufferfish.exceptions.AccountException;
 import me.cameronwhyte.pufferfish.exceptions.PaymentException;
 import me.cameronwhyte.pufferfish.repositories.AccountRepository;
 import me.cameronwhyte.pufferfish.repositories.EntityRepository;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -23,14 +21,8 @@ import java.util.*;
 public class Account implements Serializable, EntityRepository<AccountRepository> {
 
     @Id
-    @GeneratedValue(generator = "account-id")
-    @GenericGenerator(
-            name = "account-id",
-            parameters = {
-                    @Parameter(name = "sequence_name", value = "account_id_seq"),
-                    @Parameter(name = "initial_value", value = "1000"),
-                    @Parameter(name = "increment_size", value = "1")
-            })
+    @GeneratedValue(generator = "account-id", strategy = GenerationType.TABLE)
+    @TableGenerator(name = "account-id", table = "account_id_seq", initialValue = 1000, allocationSize = 1)
     private int id;
 
     @Setter
